@@ -1,0 +1,54 @@
+[package]
+name = "ovh-api-mcp"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+description = "MCP server for the OVH API — explore and execute any OVH endpoint via JavaScript sandboxing"
+repository = "https://github.com/davidlandais/ovh-api-mcp"
+keywords = ["mcp", "ovh", "api", "model-context-protocol", "cloud"]
+categories = ["command-line-utilities", "web-programming::http-client"]
+authors = ["David Landais"]
+
+[[bin]]
+name = "ovh-api-mcp"
+path = "src/main.rs"
+
+[dependencies]
+# MCP SDK
+rmcp = { version = "0.16", features = ["server", "macros", "transport-streamable-http-server"] }
+
+# Web framework & HTTP
+axum = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "1.0"
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1"
+
+# QuickJS sandbox
+rquickjs = { version = "0.11", features = ["futures"] }
+
+# OVH auth signature
+sha1 = "0.10"
+hex = "0.4"
+
+# Secrets protection
+secrecy = { version = "0.8", features = ["serde"] }
+
+# URL encoding
+urlencoding = "2"
