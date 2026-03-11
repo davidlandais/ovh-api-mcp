@@ -1,0 +1,58 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.davidlandais/ovh-api-mcp",
+  "description": "MCP server for the OVH API. Explore and call any OVH endpoint via sandboxed JS.",
+  "repository": {
+    "url": "https://github.com/davidlandais/ovh-api-mcp",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/davidlandais/ovh-api-mcp:0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "OVH_APPLICATION_KEY",
+          "description": "OVH API application key",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "OVH_APPLICATION_SECRET",
+          "description": "OVH API application secret",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "OVH_CONSUMER_KEY",
+          "description": "OVH API consumer key",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "OVH_ENDPOINT",
+          "description": "OVH API region: eu, ca, or us",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "default": "eu"
+        },
+        {
+          "name": "OVH_SERVICES",
+          "description": "Comma-separated OVH API services, or * for all",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "default": "*"
+        }
+      ]
+    }
+  ]
+}
