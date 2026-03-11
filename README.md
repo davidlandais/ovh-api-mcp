@@ -19,29 +19,27 @@ The LLM writes JavaScript that runs inside a **sandboxed QuickJS engine** with r
 
 ## Quick start
 
+### With Docker (recommended)
+
+```bash
+docker run -d --name ovh-api \
+  -e OVH_APPLICATION_KEY=your_app_key \
+  -e OVH_APPLICATION_SECRET=your_app_secret \
+  -e OVH_CONSUMER_KEY=your_consumer_key \
+  -p 3104:3104 \
+  ghcr.io/davidlandais/ovh-api-mcp:latest
+```
+
 ### From source
 
 ```bash
-cargo install --path .
+cargo install --git https://github.com/davidlandais/ovh-api-mcp
 
 export OVH_APPLICATION_KEY=your_app_key
 export OVH_APPLICATION_SECRET=your_app_secret
 export OVH_CONSUMER_KEY=your_consumer_key
 
 ovh-api-mcp --port 3104
-```
-
-### With Docker
-
-```bash
-docker build -t ovh-api-mcp .
-
-docker run -d --name ovh-api \
-  -e OVH_APPLICATION_KEY=your_app_key \
-  -e OVH_APPLICATION_SECRET=your_app_secret \
-  -e OVH_CONSUMER_KEY=your_consumer_key \
-  -p 3104:3104 \
-  ovh-api-mcp
 ```
 
 ### Claude Code configuration
@@ -66,15 +64,21 @@ Add to your MCP settings (`~/.claude/settings.json`):
 
 ## OVH credentials
 
-Create your API credentials at:
+You need three values: an **application key**, an **application secret**, and a **consumer key**.
 
-| Endpoint | URL |
-|----------|-----|
+### Step 1 — Create an application
+
+Go to the page matching your OVH region:
+
+| Region | URL |
+|--------|-----|
 | Europe | https://eu.api.ovh.com/createApp/ |
 | Canada | https://ca.api.ovh.com/createApp/ |
 | US | https://api.us.ovhcloud.com/createApp/ |
 
-Then request a consumer key:
+You'll get an **Application Key** and an **Application Secret**. Save both.
+
+### Step 2 — Request a consumer key
 
 ```bash
 curl -X POST https://eu.api.ovh.com/1.0/auth/credential \
@@ -82,6 +86,20 @@ curl -X POST https://eu.api.ovh.com/1.0/auth/credential \
   -H "Content-Type: application/json" \
   -d '{"accessRules": [{"method": "GET", "path": "/*"}, {"method": "POST", "path": "/*"}, {"method": "PUT", "path": "/*"}, {"method": "DELETE", "path": "/*"}]}'
 ```
+
+The response contains a `consumerKey` and a `validationUrl`:
+
+```json
+{
+  "validationUrl": "https://eu.api.ovh.com/auth/?credentialToken=...",
+  "consumerKey": "your_consumer_key",
+  "state": "pendingValidation"
+}
+```
+
+### Step 3 — Validate the consumer key
+
+**Open the `validationUrl` in your browser** and log in with your OVH account. Choose the validity period (unlimited is fine for personal use) and confirm. Without this step, the consumer key will not work.
 
 ## CLI options
 
