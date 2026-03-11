@@ -1,0 +1,61 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.davidlandais/ovh-api-mcp",
+  "description": "MCP server for the OVH API — explore and execute any OVH endpoint from Claude, Cursor, or any MCP-compatible LLM client. Sandboxed JavaScript execution with OpenAPI spec validation. Built in Rust.",
+  "repository": {
+    "url": "https://github.com/davidlandais/ovh-api-mcp",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registry_type": "oci",
+      "registry_base_url": "https://ghcr.io",
+      "identifier": "davidlandais/ovh-api-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "http",
+        "path": "/mcp"
+      },
+      "environment_variables": [
+        {
+          "name": "OVH_APPLICATION_KEY",
+          "description": "OVH API application key (create at https://eu.api.ovh.com/createApp/)",
+          "is_required": true,
+          "format": "string",
+          "is_secret": false
+        },
+        {
+          "name": "OVH_APPLICATION_SECRET",
+          "description": "OVH API application secret",
+          "is_required": true,
+          "format": "string",
+          "is_secret": true
+        },
+        {
+          "name": "OVH_CONSUMER_KEY",
+          "description": "OVH API consumer key",
+          "is_required": true,
+          "format": "string",
+          "is_secret": true
+        },
+        {
+          "name": "OVH_ENDPOINT",
+          "description": "OVH API region: eu, ca, or us",
+          "is_required": false,
+          "format": "string",
+          "is_secret": false,
+          "default": "eu"
+        },
+        {
+          "name": "OVH_SERVICES",
+          "description": "Comma-separated list of OVH API services to load, or '*' for all",
+          "is_required": false,
+          "format": "string",
+          "is_secret": false,
+          "default": "*"
+        }
+      ]
+    }
+  ]
+}
