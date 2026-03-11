@@ -1,7 +1,7 @@
 # ovh-api-mcp
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/Rust-1.85%2B-orange.svg)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/Rust-1.92%2B-orange.svg)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2025--03--26-green.svg)](https://modelcontextprotocol.io/)
 
 A native **Model Context Protocol (MCP)** server that gives LLMs full access to the **OVH API**. Built in Rust for minimal footprint (~19 MB Docker image, ~1.2 MiB RAM).
