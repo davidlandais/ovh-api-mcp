@@ -3,8 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.92%2B-orange.svg)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2025--03--26-green.svg)](https://modelcontextprotocol.io/)
+[![Status](https://img.shields.io/badge/Status-Proof%20of%20Concept-yellow.svg)](#status)
 
 A native **Model Context Protocol (MCP)** server that gives LLMs full access to the **OVH API**. Built in Rust for minimal footprint (~19 MB Docker image, ~1.2 MiB RAM).
+
+> **⚠️ Proof of Concept** — This project is intended for **local development use only**. It is not production-ready. While security hardening has been applied (sandboxed execution, spec validation, secret protection), the server has not been battle-tested at scale. Use at your own risk and do not expose it to the public internet. Feedback and bug reports are welcome to help mature the project.
 
 ## How it works
 
