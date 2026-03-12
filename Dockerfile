@@ -8,7 +8,7 @@ RUN cargo build --release 2>/dev/null || true
 COPY src/ src/
 RUN find src -name '*.rs' -exec touch {} + && cargo build --release
 
-FROM alpine:3.21
+FROM alpine:3.23
 RUN apk add --no-cache ca-certificates && adduser -D -H -s /sbin/nologin mcpuser
 COPY --from=builder /app/target/release/ovh-api-mcp /usr/local/bin/
 USER mcpuser
