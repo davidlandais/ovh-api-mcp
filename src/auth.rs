@@ -1,12 +1,12 @@
 use anyhow::{Context, Result};
-use secrecy::{ExposeSecret, Secret};
+use secrecy::{ExposeSecret, SecretString};
 use sha1::{Digest, Sha1};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct OvhClient {
     app_key: String,
-    app_secret: Secret<String>,
-    consumer_key: Secret<String>,
+    app_secret: SecretString,
+    consumer_key: SecretString,
     base_url: String,
     client: reqwest::Client,
     time_delta: i64,
@@ -19,8 +19,8 @@ impl OvhClient {
     /// Calls GET /auth/time to synchronize the clock.
     pub async fn new(
         app_key: String,
-        app_secret: Secret<String>,
-        consumer_key: Secret<String>,
+        app_secret: SecretString,
+        consumer_key: SecretString,
         endpoint: &str,
     ) -> Result<Self> {
         let base_url = match endpoint {
@@ -146,7 +146,7 @@ impl OvhClient {
             .request(http_method, &url)
             .header("X-Ovh-Application", &self.app_key)
             .header("X-Ovh-Timestamp", &timestamp)
-            .header("X-Ovh-Consumer", self.consumer_key.expose_secret().as_str())
+            .header("X-Ovh-Consumer", self.consumer_key.expose_secret())
             .header("X-Ovh-Signature", &signature)
             .header("Content-Type", "application/json");
 

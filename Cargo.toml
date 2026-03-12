@@ -48,7 +48,7 @@ sha1 = "0.10"
 hex = "0.4"
 
 # Secrets protection
-secrecy = { version = "0.8", features = ["serde"] }
+secrecy = { version = "0.10", features = ["serde"] }
 
 # URL encoding
 urlencoding = "2"
