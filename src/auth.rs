@@ -156,15 +156,17 @@ impl OvhClient {
 
         let response = req.send().await.context("OVH API request failed")?;
         let status = response.status();
-        let text = response.text().await.context("failed to read OVH response")?;
+        let text = response
+            .text()
+            .await
+            .context("failed to read OVH response")?;
 
         if !status.is_success() {
             anyhow::bail!("OVH API error {}: {}", status, text);
         }
 
         // Parse response — fallback to Value::String if not valid JSON
-        let value = serde_json::from_str(&text)
-            .unwrap_or(serde_json::Value::String(text));
+        let value = serde_json::from_str(&text).unwrap_or(serde_json::Value::String(text));
 
         Ok(value)
     }

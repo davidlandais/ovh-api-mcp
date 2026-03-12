@@ -9,8 +9,7 @@ use std::sync::Arc;
 
 use clap::Parser;
 use rmcp::transport::streamable_http_server::{
-    StreamableHttpService, StreamableHttpServerConfig,
-    session::local::LocalSessionManager,
+    session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
 };
 use tokio::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -129,7 +128,12 @@ async fn main() -> anyhow::Result<()> {
             let spec_clone = spec_json.clone();
             let client_clone = ovh_client.clone();
             let validator_clone = validator.clone();
-            Ok(OvhApiServer::new(spec_clone, client_clone, validator_clone, max_code_size))
+            Ok(OvhApiServer::new(
+                spec_clone,
+                client_clone,
+                validator_clone,
+                max_code_size,
+            ))
         },
         Arc::new(LocalSessionManager::default()),
         config,

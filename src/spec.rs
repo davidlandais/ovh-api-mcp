@@ -267,7 +267,11 @@ async fn fetch_and_merge(base_url: &str, services: &[String]) -> Result<Value> {
 }
 
 /// Fetch a single service spec with up to MAX_RETRIES attempts.
-async fn fetch_with_retry(client: &reqwest::Client, base_url: &str, service: &str) -> Result<Value> {
+async fn fetch_with_retry(
+    client: &reqwest::Client,
+    base_url: &str,
+    service: &str,
+) -> Result<Value> {
     let mut last_err = None;
     for attempt in 1..=MAX_RETRIES {
         match fetch_and_convert_with_client(client, base_url, service).await {
@@ -282,7 +286,8 @@ async fn fetch_with_retry(client: &reqwest::Client, base_url: &str, service: &st
                 );
                 last_err = Some(e);
                 if attempt < MAX_RETRIES {
-                    tokio::time::sleep(std::time::Duration::from_millis(500 * attempt as u64)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(500 * attempt as u64))
+                        .await;
                 }
             }
         }
@@ -293,7 +298,11 @@ async fn fetch_with_retry(client: &reqwest::Client, base_url: &str, service: &st
 /// Fetch a single OVH API spec and convert it to OpenAPI 3.1 format.
 ///
 /// The OVH spec is fetched from `{base_url}/{service}.json` (public, no auth).
-async fn fetch_and_convert_with_client(client: &reqwest::Client, base_url: &str, service: &str) -> Result<Value> {
+async fn fetch_and_convert_with_client(
+    client: &reqwest::Client,
+    base_url: &str,
+    service: &str,
+) -> Result<Value> {
     let url = format!("{}/{}.json", base_url.trim_end_matches('/'), service);
     tracing::info!("Fetching OVH spec from {}", url);
 
@@ -317,9 +326,7 @@ async fn fetch_and_convert_with_client(client: &reqwest::Client, base_url: &str,
                 None => continue,
             };
 
-            let path_obj = paths
-                .entry(path.to_string())
-                .or_insert_with(|| json!({}));
+            let path_obj = paths.entry(path.to_string()).or_insert_with(|| json!({}));
 
             for op in operations {
                 let method = match op["httpMethod"].as_str() {
@@ -353,7 +360,11 @@ async fn fetch_and_convert_with_client(client: &reqwest::Client, base_url: &str,
 
                         match param_type {
                             "path" | "query" => {
-                                let location = if param_type == "path" { "path" } else { "query" };
+                                let location = if param_type == "path" {
+                                    "path"
+                                } else {
+                                    "query"
+                                };
                                 let mut p = json!({
                                     "name": name,
                                     "in": location,
@@ -569,10 +580,7 @@ impl SpecValidator {
 
     /// Check if a concrete (method, path) pair matches any route in the spec.
     pub fn is_allowed(&self, method: &str, path: &str) -> bool {
-        let concrete_segments: Vec<&str> = path
-            .split('/')
-            .filter(|s| !s.is_empty())
-            .collect();
+        let concrete_segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
         let method_upper = method.to_uppercase();
 
         self.routes.iter().any(|route| {

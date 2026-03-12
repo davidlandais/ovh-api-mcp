@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
 use rmcp::{
-    ServerHandler,
-    handler::server::router::tool::ToolRouter,
-    handler::server::wrapper::Parameters,
-    model::*,
-    tool, tool_handler, tool_router,
+    handler::server::router::tool::ToolRouter, handler::server::wrapper::Parameters, model::*,
+    tool, tool_handler, tool_router, ServerHandler,
 };
 
 use crate::auth::OvhClient;
@@ -101,10 +98,7 @@ impl OvhApiServer {
             ))]));
         }
 
-        tracing::info!(
-            "search: {}",
-            &input.code[..input.code.len().min(200)]
-        );
+        tracing::info!("search: {}", &input.code[..input.code.len().min(200)]);
 
         let code = input.code;
         let spec = self.spec_json.clone();
@@ -169,10 +163,7 @@ impl OvhApiServer {
             ))]));
         }
 
-        tracing::info!(
-            "execute: {}",
-            &input.code[..input.code.len().min(200)]
-        );
+        tracing::info!("execute: {}", &input.code[..input.code.len().min(200)]);
 
         let code = input.code.clone();
         let client = self.ovh_client.clone();

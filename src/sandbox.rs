@@ -211,7 +211,10 @@ mod tests {
     #[test]
     fn eval_search_infinite_loop_is_interrupted() {
         let result = eval_search("(spec) => { while(true) {} }", "{}");
-        assert!(result.is_err(), "infinite loop should be interrupted by timeout");
+        assert!(
+            result.is_err(),
+            "infinite loop should be interrupted by timeout"
+        );
     }
 
     // CRIT-01: Verify memory limit prevents OOM
