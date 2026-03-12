@@ -188,24 +188,13 @@ impl OvhApiServer {
 #[tool_handler]
 impl ServerHandler for OvhApiServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            protocol_version: ProtocolVersion::V_2025_03_26,
-            capabilities: ServerCapabilities::builder().enable_tools().build(),
-            server_info: Implementation {
-                name: "ovh-api-server".into(),
-                title: None,
-                version: "0.1.0".into(),
-                description: None,
-                icons: None,
-                website_url: None,
-            },
-            instructions: Some(
+        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+            .with_server_info(Implementation::new("ovh-api-server", "0.1.0"))
+            .with_instructions(
                 "MCP server for the OVH API (Code Mode). Two tools: search (explore the \
                  OpenAPI spec with JavaScript) and execute (call the API with JavaScript). \
                  Covers all configured OVH API services. \
-                 Authentication is handled transparently."
-                    .into(),
-            ),
-        }
+                 Authentication is handled transparently.",
+            )
     }
 }
