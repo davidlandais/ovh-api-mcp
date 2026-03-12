@@ -9,6 +9,10 @@ A native **Model Context Protocol (MCP)** server that gives LLMs full access to 
 
 > **⚠️ Proof of Concept** — This project is intended for **local development use only**. It is not production-ready. While security hardening has been applied (sandboxed execution, spec validation, secret protection), the server has not been battle-tested at scale. Use at your own risk and do not expose it to the public internet. Feedback and bug reports are welcome to help mature the project.
 
+<a href="https://glama.ai/mcp/servers/davidlandais/ovh-api-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/davidlandais/ovh-api-mcp/badge" alt="ovh-api-mcp MCP server" />
+</a>
+
 ## How it works
 
 The server exposes two MCP tools:
