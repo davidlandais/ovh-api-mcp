@@ -1,5 +1,6 @@
 # ovh-api-mcp
 
+[![CI](https://github.com/davidlandais/ovh-api-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/davidlandais/ovh-api-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.92%2B-orange.svg)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2025--03--26-green.svg)](https://modelcontextprotocol.io/)
