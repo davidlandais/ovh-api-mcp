@@ -16,7 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 # MCP SDK
-rmcp = { version = "0.16", features = ["server", "macros", "transport-streamable-http-server"] }
+rmcp = { version = "1.2", features = ["server", "macros", "transport-streamable-http-server"] }
 
 # Web framework & HTTP
 axum = "0.8"
