@@ -1,8 +1,8 @@
 [package]
 name = "ovh-api-mcp"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.92"
 license = "MIT"
 description = "MCP server for the OVH API — explore and execute any OVH endpoint via JavaScript sandboxing"
 repository = "https://github.com/davidlandais/ovh-api-mcp"

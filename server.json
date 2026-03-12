@@ -6,11 +6,11 @@
     "url": "https://github.com/davidlandais/ovh-api-mcp",
     "source": "github"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/davidlandais/ovh-api-mcp:0.1.0",
+      "identifier": "ghcr.io/davidlandais/ovh-api-mcp:0.2.0",
       "transport": {
         "type": "stdio"
       },
