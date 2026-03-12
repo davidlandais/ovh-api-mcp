@@ -66,40 +66,15 @@ Add to your MCP settings (`~/.claude/settings.json`):
 
 You need three values: an **application key**, an **application secret**, and a **consumer key**.
 
-### Step 1 — Create an application
-
-Go to the page matching your OVH region:
+Go to the token creation page for your region, log in with your OVH account, set the permissions and validity, and you'll get all three keys at once:
 
 | Region | URL |
 |--------|-----|
-| Europe | https://eu.api.ovh.com/createApp/ |
-| Canada | https://ca.api.ovh.com/createApp/ |
-| US | https://api.us.ovhcloud.com/createApp/ |
+| Europe | https://auth.eu.ovhcloud.com/api/createToken |
+| Canada | https://auth.ca.ovhcloud.com/api/createToken |
+| US | https://auth.us.ovhcloud.com/api/createToken |
 
-You'll get an **Application Key** and an **Application Secret**. Save both.
-
-### Step 2 — Request a consumer key
-
-```bash
-curl -X POST https://eu.api.ovh.com/1.0/auth/credential \
-  -H "X-Ovh-Application: YOUR_APP_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"accessRules": [{"method": "GET", "path": "/*"}, {"method": "POST", "path": "/*"}, {"method": "PUT", "path": "/*"}, {"method": "DELETE", "path": "/*"}]}'
-```
-
-The response contains a `consumerKey` and a `validationUrl`:
-
-```json
-{
-  "validationUrl": "https://eu.api.ovh.com/auth/?credentialToken=...",
-  "consumerKey": "your_consumer_key",
-  "state": "pendingValidation"
-}
-```
-
-### Step 3 — Validate the consumer key
-
-**Open the `validationUrl` in your browser** and log in with your OVH account. Choose the validity period (unlimited is fine for personal use) and confirm. Without this step, the consumer key will not work.
+For full API access, set all four methods (`GET`, `POST`, `PUT`, `DELETE`) with path `/*`.
 
 ## CLI options
 
