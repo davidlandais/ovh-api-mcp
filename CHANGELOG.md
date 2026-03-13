@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-03-13
+
+### Added
+- Fetch and merge specs from both v1 and v2 API branches
+- Add OAuth2 CLI options and update tool examples
+- Add OAuth2 client credentials and API v2 base URL
+
+### Documentation
+- Fix service account creation instructions
+- Add OAuth2 and API v2 documentation
+
+### Testing
+- Update SpecValidator tests for v1/v2 prefixed paths
+
 ## [0.2.2] - 2026-03-13
 
 ### Documentation
