@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-03-13
+
+### Added
+- Add stdio transport and cross-compiled binary releases
+
+### Changed
+- Deduplicate changelog config ([#7](https://github.com/davidlandais/ovh-api-mcp/pull/7))
+
+### Fixed
+- Remove unsupported files field from release-plz config
+- Correct release-plz.toml syntax for package files
+- Allow server startup without OVH credentials
+
+### Miscellaneous
+- Allow manual trigger of release-plz workflow
+- Add release-plz for automated release PRs and tagging
+- Add git-cliff changelog generation and commit-msg hook
+- Add CLAUDE.md and ignore PUBLICATION.md
+
 ### Added
 - Add stdio transport and cross-compiled binary releases
 
