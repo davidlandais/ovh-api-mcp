@@ -217,7 +217,10 @@ impl OvhApiServer {
 impl ServerHandler for OvhApiServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
-            .with_server_info(Implementation::new("ovh-api-server", env!("CARGO_PKG_VERSION")))
+            .with_server_info(Implementation::new(
+                "ovh-api-server",
+                env!("CARGO_PKG_VERSION"),
+            ))
             .with_instructions(
                 "MCP server for the OVH API (Code Mode). Two tools: search (explore the \
                  OpenAPI spec with JavaScript) and execute (call the API with JavaScript). \
