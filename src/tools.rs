@@ -10,19 +10,23 @@ use crate::sandbox;
 use crate::spec::SpecValidator;
 use crate::types::CodeInput;
 
+const NO_CREDENTIALS_ERROR: &str =
+    "OVH API credentials are not configured. Set OVH_APPLICATION_KEY, OVH_APPLICATION_SECRET, \
+     and OVH_CONSUMER_KEY environment variables, then restart the server.";
+
 pub struct OvhApiServer {
     tool_router: ToolRouter<Self>,
-    spec_json: Arc<String>,
-    ovh_client: Arc<OvhClient>,
-    validator: Arc<SpecValidator>,
+    spec_json: Option<Arc<String>>,
+    ovh_client: Option<Arc<OvhClient>>,
+    validator: Option<Arc<SpecValidator>>,
     max_code_size: usize,
 }
 
 impl OvhApiServer {
     pub fn new(
-        spec_json: Arc<String>,
-        ovh_client: Arc<OvhClient>,
-        validator: Arc<SpecValidator>,
+        spec_json: Option<Arc<String>>,
+        ovh_client: Option<Arc<OvhClient>>,
+        validator: Option<Arc<SpecValidator>>,
         max_code_size: usize,
     ) -> Self {
         Self {
@@ -90,6 +94,15 @@ impl OvhApiServer {
         &self,
         Parameters(input): Parameters<CodeInput>,
     ) -> Result<CallToolResult, rmcp::ErrorData> {
+        let spec = match &self.spec_json {
+            Some(s) => s.clone(),
+            None => {
+                return Ok(CallToolResult::error(vec![Content::text(
+                    NO_CREDENTIALS_ERROR,
+                )]))
+            }
+        };
+
         if input.code.len() > self.max_code_size {
             return Ok(CallToolResult::error(vec![Content::text(format!(
                 "Code too large: {} bytes (max {})",
@@ -101,7 +114,6 @@ impl OvhApiServer {
         tracing::info!("search: {}", &input.code[..input.code.len().min(200)]);
 
         let code = input.code;
-        let spec = self.spec_json.clone();
         let result = tokio::task::spawn_blocking(move || sandbox::eval_search(&code, &spec))
             .await
             .map_err(|e| rmcp::ErrorData::internal_error(format!("join error: {e}"), None))?;
@@ -155,6 +167,23 @@ impl OvhApiServer {
         &self,
         Parameters(input): Parameters<CodeInput>,
     ) -> Result<CallToolResult, rmcp::ErrorData> {
+        let client = match &self.ovh_client {
+            Some(c) => c.clone(),
+            None => {
+                return Ok(CallToolResult::error(vec![Content::text(
+                    NO_CREDENTIALS_ERROR,
+                )]))
+            }
+        };
+        let validator = match &self.validator {
+            Some(v) => v.clone(),
+            None => {
+                return Ok(CallToolResult::error(vec![Content::text(
+                    NO_CREDENTIALS_ERROR,
+                )]))
+            }
+        };
+
         if input.code.len() > self.max_code_size {
             return Ok(CallToolResult::error(vec![Content::text(format!(
                 "Code too large: {} bytes (max {})",
@@ -166,8 +195,6 @@ impl OvhApiServer {
         tracing::info!("execute: {}", &input.code[..input.code.len().min(200)]);
 
         let code = input.code.clone();
-        let client = self.ovh_client.clone();
-        let validator = self.validator.clone();
         let result = tokio::task::spawn_blocking(move || {
             tokio::runtime::Handle::current()
                 .block_on(sandbox::eval_execute(&code, client, validator))
@@ -189,7 +216,7 @@ impl OvhApiServer {
 impl ServerHandler for OvhApiServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
-            .with_server_info(Implementation::new("ovh-api-server", "0.1.0"))
+            .with_server_info(Implementation::new("ovh-api-server", "0.2.0"))
             .with_instructions(
                 "MCP server for the OVH API (Code Mode). Two tools: search (explore the \
                  OpenAPI spec with JavaScript) and execute (call the API with JavaScript). \

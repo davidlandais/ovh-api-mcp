@@ -12,10 +12,6 @@ const MAX_CONCURRENT_FETCHES: usize = 10;
 /// Maximum retry attempts per service fetch.
 const MAX_RETRIES: usize = 3;
 
-// ---------------------------------------------------------------------------
-// Cache metadata
-// ---------------------------------------------------------------------------
-
 #[derive(Serialize, Deserialize)]
 struct CacheMeta {
     services: Vec<String>,
@@ -43,14 +39,12 @@ fn cache_is_valid(cache_dir: &Path, services: &[String], ttl_secs: u64) -> Optio
     let meta_bytes = std::fs::read(&meta_path).ok()?;
     let meta: CacheMeta = serde_json::from_slice(&meta_bytes).ok()?;
 
-    // Check TTL (use the requested ttl, not the one stored in meta)
     let age = now_epoch().saturating_sub(meta.created_at);
     if age > ttl_secs {
         tracing::info!("Cache miss: expired (age {}s > ttl {}s)", age, ttl_secs);
         return None;
     }
 
-    // Check services match (sorted comparison)
     let mut expected = services.to_vec();
     expected.sort();
     let mut cached = meta.services.clone();
@@ -97,10 +91,6 @@ fn write_cache(cache_dir: &Path, spec: &Value, services: &[String], ttl_secs: u6
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
-// Service index
-// ---------------------------------------------------------------------------
-
 /// Fetch the list of all available OVH API services from the index endpoint.
 ///
 /// The index at `GET {base_url}/` returns `{ "apis": [{ "path": "/domain" }, ...] }`.
@@ -127,10 +117,6 @@ pub async fn fetch_service_index(base_url: &str) -> Result<Vec<String>> {
     tracing::info!("Service index: {} services found", services.len());
     Ok(services)
 }
-
-// ---------------------------------------------------------------------------
-// Orchestrator
-// ---------------------------------------------------------------------------
 
 /// Load the merged OVH OpenAPI spec, with optional caching.
 ///
@@ -181,10 +167,6 @@ pub async fn load_spec(
 
     Ok(spec)
 }
-
-// ---------------------------------------------------------------------------
-// Fetch & merge (with resilience + concurrency limit)
-// ---------------------------------------------------------------------------
 
 /// Fetch multiple OVH API specs and merge them into a single OpenAPI 3.1 document.
 ///
@@ -312,7 +294,6 @@ async fn fetch_and_convert_with_client(
     let apis = spec["apis"].as_array();
     let models = spec["models"].as_object();
 
-    // --- Convert paths ---
     let mut paths = serde_json::Map::new();
 
     if let Some(apis) = apis {
@@ -340,12 +321,10 @@ async fn fetch_and_convert_with_client(
                     operation.insert("summary".to_string(), json!(desc));
                 }
 
-                // noAuthentication
                 if op["noAuthentication"].as_bool() == Some(true) {
                     operation.insert("x-no-authentication".to_string(), json!(true));
                 }
 
-                // Parameters & body
                 let mut params = Vec::new();
                 let mut body_props = serde_json::Map::new();
                 let mut body_required = Vec::new();
@@ -417,7 +396,6 @@ async fn fetch_and_convert_with_client(
                     );
                 }
 
-                // Response
                 let response_type = op["responseType"].as_str().unwrap_or("void");
                 let response_schema = convert_type(response_type);
                 operation.insert(
@@ -439,13 +417,11 @@ async fn fetch_and_convert_with_client(
         }
     }
 
-    // --- Convert models to components/schemas ---
     let mut schemas = serde_json::Map::new();
 
     if let Some(models) = models {
         for (model_name, model) in models {
             let schema = if model.get("enum").is_some() {
-                // Enum model
                 let mut s = json!({
                     "type": model["enumType"].as_str().unwrap_or("string"),
                     "enum": model["enum"],
@@ -455,7 +431,6 @@ async fn fetch_and_convert_with_client(
                 }
                 s
             } else {
-                // Object model
                 let mut props = serde_json::Map::new();
 
                 if let Some(properties) = model["properties"].as_object() {
@@ -463,7 +438,6 @@ async fn fetch_and_convert_with_client(
                         let prop_type = prop["type"].as_str().unwrap_or("string");
                         let mut schema = convert_type(prop_type);
 
-                        // canBeNull -> nullable via array form
                         if prop["canBeNull"].as_bool() == Some(true) {
                             schema = make_nullable(schema);
                         }
@@ -515,10 +489,6 @@ async fn fetch_and_convert_with_client(
         },
     }))
 }
-
-// ---------------------------------------------------------------------------
-// Spec validator — path+method enforcement against loaded OpenAPI spec
-// ---------------------------------------------------------------------------
 
 /// Segment of an OpenAPI path template.
 #[derive(Debug, Clone)]
@@ -598,13 +568,8 @@ impl SpecValidator {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Type conversion helpers
-// ---------------------------------------------------------------------------
-
 /// Convert an OVH type string to an OpenAPI 3.1 schema fragment.
 fn convert_type(data_type: &str) -> Value {
-    // Array types: "string[]", "long[]", etc.
     if let Some(inner) = data_type.strip_suffix("[]") {
         return json!({
             "type": "array",
@@ -612,7 +577,6 @@ fn convert_type(data_type: &str) -> Value {
         });
     }
 
-    // Map types: "map[string]string", etc.
     if data_type.starts_with("map[") {
         return json!({ "type": "object" });
     }
@@ -627,7 +591,6 @@ fn convert_type(data_type: &str) -> Value {
         "datetime" => json!({ "type": "string", "format": "date-time" }),
         "date" => json!({ "type": "string", "format": "date" }),
         "void" => json!({ "type": "null" }),
-        // Anything else is a $ref to a model
         other => json!({ "$ref": format!("#/components/schemas/{}", other) }),
     }
 }

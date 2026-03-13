@@ -35,15 +35,15 @@ struct Cli {
 
     /// OVH application key
     #[arg(long, env = "OVH_APPLICATION_KEY")]
-    app_key: String,
+    app_key: Option<String>,
 
     /// OVH application secret
     #[arg(long, env = "OVH_APPLICATION_SECRET")]
-    app_secret: String,
+    app_secret: Option<String>,
 
     /// OVH consumer key
     #[arg(long, env = "OVH_CONSUMER_KEY")]
-    consumer_key: String,
+    consumer_key: Option<String>,
 
     /// OVH API services to load (comma-separated, or "*" for all)
     #[arg(long, env = "OVH_SERVICES", value_delimiter = ',', default_value = "*")]
@@ -91,47 +91,52 @@ async fn main() -> anyhow::Result<()> {
 
     let cli = Cli::parse();
 
-    // Extract config before moving fields into OvhClient
     let cache_dir = cli.effective_cache_dir();
     let cache_ttl = cli.cache_ttl;
     let services = cli.services;
     let max_code_size = cli.max_code_size;
 
-    // Create the OVH API client (synchronizes clock with OVH server)
-    let ovh_client = OvhClient::new(
-        cli.app_key,
-        cli.app_secret.into(),
-        cli.consumer_key.into(),
-        &cli.endpoint,
-    )
-    .await?;
+    let has_credentials =
+        cli.app_key.is_some() && cli.app_secret.is_some() && cli.consumer_key.is_some();
 
-    // Load the merged OpenAPI spec (with caching + wildcard resolution)
-    let spec = spec::load_spec(
-        ovh_client.base_url(),
-        &services,
-        cache_dir.as_deref(),
-        cache_ttl,
-    )
-    .await?;
+    let (spec_json, validator, ovh_client) = if has_credentials {
+        let ovh_client = OvhClient::new(
+            cli.app_key.unwrap(),
+            cli.app_secret.unwrap().into(),
+            cli.consumer_key.unwrap().into(),
+            &cli.endpoint,
+        )
+        .await?;
 
-    let spec_json = Arc::new(serde_json::to_string(&spec)?);
-    let validator = Arc::new(SpecValidator::from_spec(&spec));
-    let ovh_client = Arc::new(ovh_client);
+        let spec = spec::load_spec(
+            ovh_client.base_url(),
+            &services,
+            cache_dir.as_deref(),
+            cache_ttl,
+        )
+        .await?;
 
-    // Build the MCP service — each session gets a fresh server instance
+        let spec_json = Arc::new(serde_json::to_string(&spec)?);
+        let validator = Arc::new(SpecValidator::from_spec(&spec));
+        let ovh_client = Arc::new(ovh_client);
+
+        (Some(spec_json), Some(validator), Some(ovh_client))
+    } else {
+        tracing::warn!(
+            "No OVH credentials provided. Server will start but tools will return errors until credentials are configured."
+        );
+        (None, None, None)
+    };
+
     let config = StreamableHttpServerConfig::default();
     let cancel_token = config.cancellation_token.clone();
 
     let mcp_service = StreamableHttpService::new(
         move || {
-            let spec_clone = spec_json.clone();
-            let client_clone = ovh_client.clone();
-            let validator_clone = validator.clone();
             Ok(OvhApiServer::new(
-                spec_clone,
-                client_clone,
-                validator_clone,
+                spec_json.clone(),
+                ovh_client.clone(),
+                validator.clone(),
                 max_code_size,
             ))
         },
@@ -139,7 +144,6 @@ async fn main() -> anyhow::Result<()> {
         config,
     );
 
-    // Mount at /mcp
     let app = axum::Router::new().nest_service("/mcp", mcp_service);
 
     let addr = format!("{}:{}", cli.host, cli.port);

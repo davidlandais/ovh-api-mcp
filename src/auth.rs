@@ -34,7 +34,6 @@ impl OvhClient {
             .redirect(reqwest::redirect::Policy::none())
             .build()?;
 
-        // Fetch server time to compute delta
         let server_time: i64 = client
             .get(format!("{}/auth/time", base_url))
             .send()
@@ -97,7 +96,6 @@ impl OvhClient {
         query: Option<&serde_json::Value>,
         body: Option<&serde_json::Value>,
     ) -> Result<serde_json::Value> {
-        // Build full URL with query params
         let mut url = format!("{}{}", self.base_url, path);
 
         if let Some(serde_json::Value::Object(params)) = query {
@@ -119,28 +117,23 @@ impl OvhClient {
             }
         }
 
-        // Body string for signature and request
         let body_str = match body {
             Some(b) => serde_json::to_string(b)?,
             None => String::new(),
         };
 
-        // Compute timestamp
         let local_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs() as i64;
         let timestamp = (local_time + self.time_delta).to_string();
 
-        // Sign
         let signature = self.sign(method, &url, &body_str, &timestamp);
 
-        // Parse HTTP method
         let http_method: reqwest::Method = method
             .parse()
             .with_context(|| format!("invalid HTTP method: {}", method))?;
 
-        // Build and send request
         let mut req = self
             .client
             .request(http_method, &url)
@@ -165,7 +158,6 @@ impl OvhClient {
             anyhow::bail!("OVH API error {}: {}", status, text);
         }
 
-        // Parse response — fallback to Value::String if not valid JSON
         let value = serde_json::from_str(&text).unwrap_or(serde_json::Value::String(text));
 
         Ok(value)

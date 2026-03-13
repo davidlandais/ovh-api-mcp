@@ -20,7 +20,6 @@ const JS_ASYNC_TIMEOUT_SECS: u64 = 30;
 pub fn eval_search(code: &str, spec_json: &str) -> anyhow::Result<String> {
     let rt = rquickjs::Runtime::new().map_err(|e| anyhow::anyhow!("QuickJS runtime error: {e}"))?;
 
-    // CRIT-01: Resource limits on the QuickJS runtime
     rt.set_memory_limit(JS_MEMORY_LIMIT);
     rt.set_max_stack_size(JS_MAX_STACK_SIZE);
     rt.set_interrupt_handler(Some({
@@ -57,7 +56,7 @@ pub fn eval_search(code: &str, spec_json: &str) -> anyhow::Result<String> {
 ///
 /// `code` is a JS expression that evaluates to an async function: `async () => { ... }`.
 /// The function can call `ovh.request({ method, path, query, body })` to make OVH API calls.
-/// Each request is validated against the loaded OpenAPI spec (CRIT-02).
+/// Each request is validated against the loaded OpenAPI spec.
 /// Returns the JSON-stringified result.
 pub async fn eval_execute(
     code: &str,
@@ -67,7 +66,6 @@ pub async fn eval_execute(
     let rt = rquickjs::AsyncRuntime::new()
         .map_err(|e| anyhow::anyhow!("QuickJS async runtime error: {e}"))?;
 
-    // CRIT-01: Resource limits on the async QuickJS runtime
     rt.set_memory_limit(JS_MEMORY_LIMIT).await;
     rt.set_max_stack_size(JS_MAX_STACK_SIZE).await;
     rt.set_interrupt_handler(Some({
@@ -94,7 +92,6 @@ pub async fn eval_execute(
                 let c = client_clone.clone();
                 let v = validator_clone.clone();
                 async move {
-                    // CRIT-02: Validate path + method against the OpenAPI spec
                     if !v.is_allowed(&method, &path) {
                         return format!(
                             "__OVH_ERROR__Endpoint {} {} not found in the loaded OpenAPI spec. Use the 'search' tool first to find valid endpoints.",
@@ -102,7 +99,6 @@ pub async fn eval_execute(
                         );
                     }
 
-                    // MED-02: Validate path has no injection characters
                     if !path.starts_with('/') || path.contains('?') || path.contains('#') || path.contains("..") {
                         return format!(
                             "__OVH_ERROR__Invalid API path: {}. Path must start with '/' and not contain '?', '#' or '..'",
@@ -207,7 +203,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // CRIT-01: Verify the interrupt handler stops infinite loops
     #[test]
     fn eval_search_infinite_loop_is_interrupted() {
         let result = eval_search("(spec) => { while(true) {} }", "{}");
@@ -217,7 +212,6 @@ mod tests {
         );
     }
 
-    // CRIT-01: Verify memory limit prevents OOM
     #[test]
     fn eval_search_memory_limit() {
         let code = r#"(spec) => { let a = []; for (let i = 0; i < 10000000; i++) a.push(new Array(1000)); return a.length; }"#;
@@ -225,7 +219,6 @@ mod tests {
         assert!(result.is_err(), "excessive memory allocation should fail");
     }
 
-    // CRIT-01: Verify stack limit prevents stack overflow
     #[test]
     fn eval_search_stack_overflow() {
         let code = "(spec) => { function f() { return f(); } return f(); }";
