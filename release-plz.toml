@@ -3,6 +3,9 @@
 changelog_config = "Cargo.toml"
 changelog_update = true
 
+# Determine versions from git tags (not crates.io)
+git_only = true
+
 # Create git tags (triggers release.yml)
 git_tag_enable = true
 git_tag_name = "v{{ version }}"
@@ -18,7 +21,9 @@ semver_check = false
 pr_labels = ["release"]
 pr_name = "chore: release v{{ version }}"
 
-# Also bump version in server.json
+[[package]]
+name = "ovh-api-mcp"
+
 [[package.files]]
 path = "server.json"
 search = '"version": ".*"'
