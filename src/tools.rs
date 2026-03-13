@@ -11,8 +11,9 @@ use crate::spec::SpecValidator;
 use crate::types::CodeInput;
 
 const NO_CREDENTIALS_ERROR: &str =
-    "OVH API credentials are not configured. Set OVH_APPLICATION_KEY, OVH_APPLICATION_SECRET, \
-     and OVH_CONSUMER_KEY environment variables, then restart the server.";
+    "No OVH credentials configured. Set OVH_APPLICATION_KEY + OVH_APPLICATION_SECRET + \
+     OVH_CONSUMER_KEY for API key auth, or OVH_CLIENT_ID + OVH_CLIENT_SECRET for OAuth2 \
+     auth. Then restart the server.";
 
 pub struct OvhApiServer {
     tool_router: ToolRouter<Self>,
@@ -85,7 +86,7 @@ impl OvhApiServer {
     /// ```javascript
     /// // Get request body for creating an account
     /// (spec) => {
-    ///   const op = spec.paths["/email/domain/{domain}/account"]?.post;
+    ///   const op = spec.paths["/v1/email/domain/{domain}/account"]?.post;
     ///   return { summary: op?.summary, requestBody: op?.requestBody, parameters: op?.parameters };
     /// }
     /// ```
@@ -148,15 +149,15 @@ impl OvhApiServer {
     /// Examples:
     /// ```javascript
     /// // List email domains
-    /// async () => await ovh.request({ method: "GET", path: "/email/domain" })
+    /// async () => await ovh.request({ method: "GET", path: "/v1/email/domain" })
     /// ```
     /// ```javascript
     /// // List accounts then get details
     /// async () => {
-    ///   const accounts = await ovh.request({ method: "GET", path: "/email/domain/example.com/account" });
+    ///   const accounts = await ovh.request({ method: "GET", path: "/v1/email/domain/example.com/account" });
     ///   const details = [];
     ///   for (const name of accounts.slice(0, 5)) {
-    ///     const d = await ovh.request({ method: "GET", path: `/email/domain/example.com/account/${name}` });
+    ///     const d = await ovh.request({ method: "GET", path: `/v1/email/domain/example.com/account/${name}` });
     ///     details.push(d);
     ///   }
     ///   return details;
