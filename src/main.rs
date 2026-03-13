@@ -7,25 +7,32 @@ mod types;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use clap::Parser;
-use rmcp::transport::streamable_http_server::{
-    session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
-};
-use tokio::net::TcpListener;
+use clap::{Parser, ValueEnum};
+use rmcp::ServiceExt;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use auth::OvhClient;
 use spec::SpecValidator;
 use tools::OvhApiServer;
 
+#[derive(Clone, ValueEnum)]
+enum Transport {
+    Http,
+    Stdio,
+}
+
 #[derive(Parser)]
 #[command(name = "ovh-api-mcp", about = "OVH API MCP server (Code Mode)")]
 struct Cli {
-    /// Port to listen on
+    /// Transport mode
+    #[arg(long, default_value = "http", env = "OVH_TRANSPORT")]
+    transport: Transport,
+
+    /// Port to listen on (HTTP transport only)
     #[arg(long, default_value = "3104", env = "PORT")]
     port: u16,
 
-    /// Host to bind to
+    /// Host to bind to (HTTP transport only)
     #[arg(long, default_value = "127.0.0.1")]
     host: String,
 
@@ -67,7 +74,6 @@ struct Cli {
 }
 
 impl Cli {
-    /// Resolve the effective cache directory (explicit flag, or default to $HOME/.cache/ovh-api-mcp/).
     fn effective_cache_dir(&self) -> Option<PathBuf> {
         if self.no_cache || self.cache_ttl == 0 {
             return None;
@@ -75,7 +81,6 @@ impl Cli {
         if let Some(ref dir) = self.cache_dir {
             return Some(dir.clone());
         }
-        // Default: $HOME/.cache/ovh-api-mcp/
         std::env::var("HOME")
             .ok()
             .map(|home| PathBuf::from(home).join(".cache").join("ovh-api-mcp"))
@@ -95,6 +100,7 @@ async fn main() -> anyhow::Result<()> {
     let cache_ttl = cli.cache_ttl;
     let services = cli.services;
     let max_code_size = cli.max_code_size;
+    let transport = cli.transport.clone();
 
     let has_credentials =
         cli.app_key.is_some() && cli.app_secret.is_some() && cli.consumer_key.is_some();
@@ -128,37 +134,53 @@ async fn main() -> anyhow::Result<()> {
         (None, None, None)
     };
 
-    let config = StreamableHttpServerConfig::default();
-    let cancel_token = config.cancellation_token.clone();
+    match transport {
+        Transport::Stdio => {
+            tracing::info!("ovh-api-mcp server running on stdio");
+            let server = OvhApiServer::new(spec_json, ovh_client, validator, max_code_size);
+            let service = server.serve(rmcp::transport::stdio()).await?;
+            service.waiting().await?;
+        }
+        Transport::Http => {
+            use rmcp::transport::streamable_http_server::{
+                session::local::LocalSessionManager, StreamableHttpServerConfig,
+                StreamableHttpService,
+            };
+            use tokio::net::TcpListener;
 
-    let mcp_service = StreamableHttpService::new(
-        move || {
-            Ok(OvhApiServer::new(
-                spec_json.clone(),
-                ovh_client.clone(),
-                validator.clone(),
-                max_code_size,
-            ))
-        },
-        Arc::new(LocalSessionManager::default()),
-        config,
-    );
+            let config = StreamableHttpServerConfig::default();
+            let cancel_token = config.cancellation_token.clone();
 
-    let app = axum::Router::new().nest_service("/mcp", mcp_service);
+            let mcp_service = StreamableHttpService::new(
+                move || {
+                    Ok(OvhApiServer::new(
+                        spec_json.clone(),
+                        ovh_client.clone(),
+                        validator.clone(),
+                        max_code_size,
+                    ))
+                },
+                Arc::new(LocalSessionManager::default()),
+                config,
+            );
 
-    let addr = format!("{}:{}", cli.host, cli.port);
-    let listener = TcpListener::bind(&addr).await?;
-    tracing::info!("ovh-api-mcp server listening on {addr}");
+            let app = axum::Router::new().nest_service("/mcp", mcp_service);
 
-    axum::serve(listener, app)
-        .with_graceful_shutdown(async move {
-            tokio::signal::ctrl_c()
-                .await
-                .expect("failed to listen for Ctrl+C");
-            tracing::info!("shutting down");
-            cancel_token.cancel();
-        })
-        .await?;
+            let addr = format!("{}:{}", cli.host, cli.port);
+            let listener = TcpListener::bind(&addr).await?;
+            tracing::info!("ovh-api-mcp server listening on {addr}");
+
+            axum::serve(listener, app)
+                .with_graceful_shutdown(async move {
+                    tokio::signal::ctrl_c()
+                        .await
+                        .expect("failed to listen for Ctrl+C");
+                    tracing::info!("shutting down");
+                    cancel_token.cancel();
+                })
+                .await?;
+        }
+    }
 
     Ok(())
 }
