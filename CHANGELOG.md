@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-03-13
+
+### Documentation
+- Update README for stdio transport and improve PR template ([#10](https://github.com/davidlandais/ovh-api-mcp/pull/10))
+
+### Fixed
+- Use cargo-zigbuild for Linux musl cross-compilation ([#12](https://github.com/davidlandais/ovh-api-mcp/pull/12))
+
 ## [0.2.1] - 2026-03-13
 
 ### Added
