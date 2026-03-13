@@ -8,16 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.2.3] - 2026-03-13
+## [0.3.0] - 2026-03-13
 
 ### Added
-- Fetch and merge specs from both v1 and v2 API branches
-- Add OAuth2 CLI options and update tool examples
-- Add OAuth2 client credentials and API v2 base URL
+- OAuth2 client credentials authentication as an alternative to API keys
+- API v2 support: 14 new services (iam, okms, publicCloud, zimbra, etc.) alongside 70 v1 services
+- All spec paths are prefixed with `/v1/` or `/v2/` for transparent routing
+- Manual GitHub Actions workflow to publish to MCP Registry
 
 ### Documentation
-- Fix service account creation instructions
+- Fix service account creation instructions (API only, not Manager)
 - Add OAuth2 and API v2 documentation
+
+### Breaking Changes
+- API paths in the spec are now prefixed (`/v1/domain/zone` instead of `/domain/zone`)
+- Base URL no longer includes `/1.0` (now root like `https://eu.api.ovh.com`)
+- Existing spec caches are auto-invalidated via format_version bump
 
 ### Testing
 - Update SpecValidator tests for v1/v2 prefixed paths
