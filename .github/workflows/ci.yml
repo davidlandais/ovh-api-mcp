@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 0
       - name: Verify commit messages
         run: |
-          commits=$(git log --format='%s' origin/main..HEAD)
+          commits=$(git log --no-merges --format='%s' origin/main..HEAD)
           pattern='^(feat|fix|docs|style|refactor|perf|test|chore|deps|security)(\(.+\))?(!)?: .{1,}$'
           failed=0
           while IFS= read -r msg; do
