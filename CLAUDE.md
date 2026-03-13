@@ -23,7 +23,7 @@ src/
   main.rs      CLI (clap), logging, axum server, graceful shutdown
   tools.rs     MCP tools (search, execute) — rmcp macros #[tool_router] / #[tool_handler]
   sandbox.rs   QuickJS sandbox with resource limits (64 MiB mem, 1 MiB stack, 10s/30s timeout)
-  auth.rs      OVH API client (SHA1 signature, clock sync, SecretString)
+  auth.rs      OVH API client (API key SHA1 signature, OAuth2 client credentials, clock sync, SecretString)
   spec.rs      OpenAPI spec fetching, caching, merging, and SpecValidator
   types.rs     MCP input types (JsonSchema)
 ```
@@ -57,6 +57,8 @@ OVH_APPLICATION_SECRET=...
 OVH_CONSUMER_KEY=...
 OVH_ENDPOINT=eu           # eu, ca, us
 OVH_SERVICES=*             # or domain,email/domain,...
+OVH_CLIENT_ID=...             # OAuth2 alternative (service account, created via API)
+OVH_CLIENT_SECRET=...         # OAuth2 alternative (service account, created via API)
 ```
 
 ## Publication

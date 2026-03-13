@@ -52,6 +52,14 @@ struct Cli {
     #[arg(long, env = "OVH_CONSUMER_KEY")]
     consumer_key: Option<String>,
 
+    /// OVH OAuth2 client ID (service account)
+    #[arg(long, env = "OVH_CLIENT_ID")]
+    client_id: Option<String>,
+
+    /// OVH OAuth2 client secret (service account)
+    #[arg(long, env = "OVH_CLIENT_SECRET")]
+    client_secret: Option<String>,
+
     /// OVH API services to load (comma-separated, or "*" for all)
     #[arg(long, env = "OVH_SERVICES", value_delimiter = ',', default_value = "*")]
     services: Vec<String>,
@@ -102,36 +110,69 @@ async fn main() -> anyhow::Result<()> {
     let max_code_size = cli.max_code_size;
     let transport = cli.transport.clone();
 
-    let has_credentials =
+    let has_apikey =
         cli.app_key.is_some() && cli.app_secret.is_some() && cli.consumer_key.is_some();
+    let has_oauth2 = cli.client_id.is_some() && cli.client_secret.is_some();
 
-    let (spec_json, validator, ovh_client) = if has_credentials {
-        let ovh_client = OvhClient::new(
-            cli.app_key.unwrap(),
-            cli.app_secret.unwrap().into(),
-            cli.consumer_key.unwrap().into(),
-            &cli.endpoint,
-        )
-        .await?;
+    let (spec_json, validator, ovh_client) = match (has_apikey, has_oauth2) {
+        (true, true) => {
+            anyhow::bail!(
+                "Both API key and OAuth2 credentials provided. Use one or the other.\n\
+                 API keys: OVH_APPLICATION_KEY + OVH_APPLICATION_SECRET + OVH_CONSUMER_KEY\n\
+                 OAuth2:   OVH_CLIENT_ID + OVH_CLIENT_SECRET"
+            );
+        }
+        (true, false) => {
+            let ovh_client = OvhClient::new_apikey(
+                cli.app_key.unwrap(),
+                cli.app_secret.unwrap().into(),
+                cli.consumer_key.unwrap().into(),
+                &cli.endpoint,
+            )
+            .await?;
 
-        let spec = spec::load_spec(
-            ovh_client.base_url(),
-            &services,
-            cache_dir.as_deref(),
-            cache_ttl,
-        )
-        .await?;
+            let spec = spec::load_spec(
+                ovh_client.base_url(),
+                &services,
+                cache_dir.as_deref(),
+                cache_ttl,
+            )
+            .await?;
 
-        let spec_json = Arc::new(serde_json::to_string(&spec)?);
-        let validator = Arc::new(SpecValidator::from_spec(&spec));
-        let ovh_client = Arc::new(ovh_client);
+            let spec_json = Arc::new(serde_json::to_string(&spec)?);
+            let validator = Arc::new(SpecValidator::from_spec(&spec));
+            let ovh_client = Arc::new(ovh_client);
 
-        (Some(spec_json), Some(validator), Some(ovh_client))
-    } else {
-        tracing::warn!(
-            "No OVH credentials provided. Server will start but tools will return errors until credentials are configured."
-        );
-        (None, None, None)
+            (Some(spec_json), Some(validator), Some(ovh_client))
+        }
+        (false, true) => {
+            let ovh_client = OvhClient::new_oauth2(
+                cli.client_id.unwrap(),
+                cli.client_secret.unwrap().into(),
+                &cli.endpoint,
+            )
+            .await?;
+
+            let spec = spec::load_spec(
+                ovh_client.base_url(),
+                &services,
+                cache_dir.as_deref(),
+                cache_ttl,
+            )
+            .await?;
+
+            let spec_json = Arc::new(serde_json::to_string(&spec)?);
+            let validator = Arc::new(SpecValidator::from_spec(&spec));
+            let ovh_client = Arc::new(ovh_client);
+
+            (Some(spec_json), Some(validator), Some(ovh_client))
+        }
+        (false, false) => {
+            tracing::warn!(
+                "No OVH credentials provided. Server will start but tools will return errors until credentials are configured."
+            );
+            (None, None, None)
+        }
     };
 
     match transport {

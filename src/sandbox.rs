@@ -235,10 +235,10 @@ mod validator_tests {
     fn test_validator() -> SpecValidator {
         let spec = json!({
             "paths": {
-                "/domain/zone": { "get": {}, "post": {} },
-                "/domain/zone/{zoneName}": { "get": {}, "put": {}, "delete": {} },
-                "/domain/zone/{zoneName}/record/{id}": { "get": {}, "put": {} },
-                "/me": { "get": {} },
+                "/v1/domain/zone": { "get": {}, "post": {} },
+                "/v1/domain/zone/{zoneName}": { "get": {}, "put": {}, "delete": {} },
+                "/v1/domain/zone/{zoneName}/record/{id}": { "get": {}, "put": {} },
+                "/v1/me": { "get": {} },
             }
         });
         SpecValidator::from_spec(&spec)
@@ -247,45 +247,63 @@ mod validator_tests {
     #[test]
     fn allows_exact_path_and_method() {
         let v = test_validator();
-        assert!(v.is_allowed("GET", "/domain/zone"));
-        assert!(v.is_allowed("POST", "/domain/zone"));
-        assert!(v.is_allowed("GET", "/me"));
+        assert!(v.is_allowed("GET", "/v1/domain/zone"));
+        assert!(v.is_allowed("POST", "/v1/domain/zone"));
+        assert!(v.is_allowed("GET", "/v1/me"));
     }
 
     #[test]
     fn allows_path_with_parameters() {
         let v = test_validator();
-        assert!(v.is_allowed("GET", "/domain/zone/example.com"));
-        assert!(v.is_allowed("PUT", "/domain/zone/example.com"));
-        assert!(v.is_allowed("DELETE", "/domain/zone/example.com"));
+        assert!(v.is_allowed("GET", "/v1/domain/zone/example.com"));
+        assert!(v.is_allowed("PUT", "/v1/domain/zone/example.com"));
+        assert!(v.is_allowed("DELETE", "/v1/domain/zone/example.com"));
     }
 
     #[test]
     fn allows_nested_parameters() {
         let v = test_validator();
-        assert!(v.is_allowed("GET", "/domain/zone/example.com/record/123"));
-        assert!(v.is_allowed("PUT", "/domain/zone/example.com/record/456"));
+        assert!(v.is_allowed("GET", "/v1/domain/zone/example.com/record/123"));
+        assert!(v.is_allowed("PUT", "/v1/domain/zone/example.com/record/456"));
     }
 
     #[test]
     fn rejects_wrong_method() {
         let v = test_validator();
-        assert!(!v.is_allowed("DELETE", "/domain/zone")); // only GET, POST
-        assert!(!v.is_allowed("POST", "/me")); // only GET
+        assert!(!v.is_allowed("DELETE", "/v1/domain/zone")); // only GET, POST
+        assert!(!v.is_allowed("POST", "/v1/me")); // only GET
     }
 
     #[test]
     fn rejects_unknown_path() {
         let v = test_validator();
         assert!(!v.is_allowed("GET", "/nonexistent"));
-        assert!(!v.is_allowed("GET", "/domain/zone/example.com/record/123/extra"));
-        assert!(!v.is_allowed("DELETE", "/dedicated/server/ns123.ovh.net"));
+        assert!(!v.is_allowed("GET", "/v1/domain/zone/example.com/record/123/extra"));
+        assert!(!v.is_allowed("DELETE", "/v1/dedicated/server/ns123.ovh.net"));
     }
 
     #[test]
     fn case_insensitive_method() {
         let v = test_validator();
-        assert!(v.is_allowed("get", "/me"));
-        assert!(v.is_allowed("Get", "/me"));
+        assert!(v.is_allowed("get", "/v1/me"));
+        assert!(v.is_allowed("Get", "/v1/me"));
+    }
+
+    #[test]
+    fn allows_v2_paths() {
+        let spec = json!({
+            "paths": {
+                "/v1/domain/zone": { "get": {} },
+                "/v2/iam/policy": { "get": {}, "post": {} },
+                "/v2/iam/policy/{policyId}": { "get": {}, "put": {}, "delete": {} },
+            }
+        });
+        let v = SpecValidator::from_spec(&spec);
+        assert!(v.is_allowed("GET", "/v1/domain/zone"));
+        assert!(v.is_allowed("GET", "/v2/iam/policy"));
+        assert!(v.is_allowed("POST", "/v2/iam/policy"));
+        assert!(v.is_allowed("GET", "/v2/iam/policy/my-policy-id"));
+        assert!(!v.is_allowed("GET", "/v2/nonexistent"));
+        assert!(!v.is_allowed("GET", "/v1/iam/policy"));
     }
 }

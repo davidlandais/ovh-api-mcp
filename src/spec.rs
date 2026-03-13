@@ -12,11 +12,16 @@ const MAX_CONCURRENT_FETCHES: usize = 10;
 /// Maximum retry attempts per service fetch.
 const MAX_RETRIES: usize = 3;
 
+/// Cache format version. Bump when the cache structure changes.
+const CACHE_FORMAT_VERSION: u32 = 2;
+
 #[derive(Serialize, Deserialize)]
 struct CacheMeta {
     services: Vec<String>,
     created_at: u64,
     ttl_secs: u64,
+    #[serde(default)]
+    format_version: u32,
 }
 
 fn now_epoch() -> u64 {
@@ -42,6 +47,15 @@ fn cache_is_valid(cache_dir: &Path, services: &[String], ttl_secs: u64) -> Optio
     let age = now_epoch().saturating_sub(meta.created_at);
     if age > ttl_secs {
         tracing::info!("Cache miss: expired (age {}s > ttl {}s)", age, ttl_secs);
+        return None;
+    }
+
+    if meta.format_version != CACHE_FORMAT_VERSION {
+        tracing::info!(
+            "Cache miss: format version {} (expected {})",
+            meta.format_version,
+            CACHE_FORMAT_VERSION
+        );
         return None;
     }
 
@@ -79,6 +93,7 @@ fn write_cache(cache_dir: &Path, spec: &Value, services: &[String], ttl_secs: u6
         services: sorted_services,
         created_at: now_epoch(),
         ttl_secs,
+        format_version: CACHE_FORMAT_VERSION,
     };
 
     std::fs::write(cache_dir.join("spec.json"), serde_json::to_string(spec)?)?;
@@ -94,8 +109,8 @@ fn write_cache(cache_dir: &Path, spec: &Value, services: &[String], ttl_secs: u6
 /// Fetch the list of all available OVH API services from the index endpoint.
 ///
 /// The index at `GET {base_url}/` returns `{ "apis": [{ "path": "/domain" }, ...] }`.
-pub async fn fetch_service_index(base_url: &str) -> Result<Vec<String>> {
-    let url = format!("{}/", base_url.trim_end_matches('/'));
+pub async fn fetch_service_index(base_url: &str, branch: &str) -> Result<Vec<String>> {
+    let url = format!("{}/{}/", base_url.trim_end_matches('/'), branch);
     tracing::info!("Fetching OVH service index from {}", url);
 
     let resp: Value = reqwest::get(&url).await?.json().await?;
@@ -114,7 +129,11 @@ pub async fn fetch_service_index(base_url: &str) -> Result<Vec<String>> {
         })
         .unwrap_or_default();
 
-    tracing::info!("Service index: {} services found", services.len());
+    tracing::info!(
+        "Service index ({}): {} services found",
+        branch,
+        services.len()
+    );
     Ok(services)
 }
 
@@ -131,7 +150,15 @@ pub async fn load_spec(
 ) -> Result<Value> {
     // 1. Resolve wildcard
     let resolved = if services.len() == 1 && services[0] == "*" {
-        fetch_service_index(base_url).await?
+        let v1_services = fetch_service_index(base_url, "v1").await?;
+        let v2_services = fetch_service_index(base_url, "v2").await?;
+        let mut all = v1_services;
+        for s in v2_services {
+            if !all.contains(&s) {
+                all.push(s);
+            }
+        }
+        all
     } else {
         services.to_vec()
     };
@@ -177,30 +204,35 @@ async fn fetch_and_merge(base_url: &str, services: &[String]) -> Result<Value> {
     let semaphore = std::sync::Arc::new(Semaphore::new(MAX_CONCURRENT_FETCHES));
     let mut handles = Vec::new();
 
-    for service in services {
-        let base_url = base_url.to_string();
-        let service = service.clone();
-        let client = client.clone();
-        let sem = semaphore.clone();
-        handles.push(tokio::spawn(async move {
-            let _permit = sem.acquire().await;
-            let result = fetch_with_retry(&client, &base_url, &service).await;
-            (service, result)
-        }));
+    for branch in &["v1", "v2"] {
+        for service in services {
+            let branch_url = format!("{}/{}", base_url, branch);
+            let branch = branch.to_string();
+            let service = service.clone();
+            let client = client.clone();
+            let sem = semaphore.clone();
+            handles.push(tokio::spawn(async move {
+                let _permit = sem.acquire().await;
+                let result = fetch_with_retry(&client, &branch_url, &service).await;
+                (branch, service, result)
+            }));
+        }
     }
 
     let mut merged_paths = serde_json::Map::new();
     let mut merged_schemas = serde_json::Map::new();
     let total = handles.len();
     let mut failed = 0usize;
+    let mut not_found = 0usize;
 
     for handle in handles {
-        let (service_name, result) = handle.await?;
+        let (branch, service_name, result) = handle.await?;
         match result {
             Ok(spec) => {
                 if let Some(paths) = spec["paths"].as_object() {
-                    for (k, v) in paths {
-                        merged_paths.insert(k.clone(), v.clone());
+                    for (path, methods) in paths {
+                        let prefixed_path = format!("/{}{}", branch, path);
+                        merged_paths.insert(prefixed_path, methods.clone());
                     }
                 }
                 if let Some(schemas) = spec["components"]["schemas"].as_object() {
@@ -210,29 +242,36 @@ async fn fetch_and_merge(base_url: &str, services: &[String]) -> Result<Value> {
                 }
             }
             Err(e) => {
-                failed += 1;
-                tracing::warn!("Failed to fetch service '{}': {}", service_name, e);
+                let err_str = e.to_string();
+                if err_str.contains("404") {
+                    not_found += 1;
+                    tracing::debug!("Service '{}/{}' not found (normal)", branch, service_name);
+                } else {
+                    failed += 1;
+                    tracing::warn!("Failed to fetch '{}/{}': {}", branch, service_name, e);
+                }
             }
         }
     }
 
-    let succeeded = total - failed;
-    if succeeded == 0 {
-        bail!("All {total} services failed to fetch");
+    let fetched = total - failed - not_found;
+    if fetched == 0 {
+        bail!("All {} services failed to fetch", total);
     }
 
     if failed > 0 {
         tracing::warn!(
-            "{failed}/{total} services failed, continuing with partial spec ({succeeded} services)"
+            "{failed}/{total} services failed, continuing with partial spec ({fetched} fetched, {not_found} not found)"
         );
     }
 
     tracing::info!(
-        "Merged spec: {} paths, {} schemas from {}/{} services",
+        "Merged spec: {} paths, {} schemas from {} fetched ({} not found, {} failed)",
         merged_paths.len(),
         merged_schemas.len(),
-        succeeded,
-        total,
+        fetched,
+        not_found,
+        failed,
     );
 
     Ok(json!({
@@ -288,7 +327,13 @@ async fn fetch_and_convert_with_client(
     let url = format!("{}/{}.json", base_url.trim_end_matches('/'), service);
     tracing::info!("Fetching OVH spec from {}", url);
 
-    let spec: Value = client.get(&url).send().await?.json().await?;
+    let response = client.get(&url).send().await?;
+
+    if response.status() == reqwest::StatusCode::NOT_FOUND {
+        bail!("404 Not Found: {}", url);
+    }
+
+    let spec: Value = response.json().await?;
 
     let api_version = spec["apiVersion"].as_str().unwrap_or("1.0");
     let apis = spec["apis"].as_array();
