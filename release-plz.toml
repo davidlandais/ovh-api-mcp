@@ -1,6 +1,4 @@
 [workspace]
-# Use git-cliff config from Cargo.toml
-changelog_config = "Cargo.toml"
 changelog_update = true
 
 # Determine versions from git tags (not crates.io)
@@ -21,15 +19,38 @@ semver_check = false
 pr_labels = ["release"]
 pr_name = "chore: release v{{ version }}"
 
-[[package]]
-name = "ovh-api-mcp"
+[changelog]
+header = """# Changelog
 
-[[package.files]]
-path = "server.json"
-search = '"version": ".*"'
-replace = '"version": "{{ version }}"'
+All notable changes to this project will be documented in this file.
 
-[[package.files]]
-path = "server.json"
-search = 'ovh-api-mcp:.*"'
-replace = 'ovh-api-mcp:{{ version }}"'
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+"""
+body = """
+{% if version %}\
+    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+    ## [Unreleased]
+{% endif -%}
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | striptags | trim }}
+    {% for commit in commits -%}
+    - {{ commit.message | upper_first | split(pat="\n") | first }}
+    {% endfor -%}
+{% endfor %}
+"""
+trim = true
+commit_parsers = [
+  { message = "^feat", group = "Added" },
+  { message = "^fix", group = "Fixed" },
+  { message = "^docs", group = "Documentation" },
+  { message = "^style", group = "Style" },
+  { message = "^refactor", group = "Changed" },
+  { message = "^perf", group = "Performance" },
+  { message = "^test", group = "Testing" },
+  { message = "^chore", group = "Miscellaneous" },
+  { message = "^deps", group = "Dependencies" },
+  { message = "^security", group = "Security" },
+]
