@@ -1,0 +1,30 @@
+[workspace]
+# Use git-cliff config from Cargo.toml
+changelog_config = "Cargo.toml"
+changelog_update = true
+
+# Create git tags (triggers release.yml)
+git_tag_enable = true
+git_tag_name = "v{{ version }}"
+
+# Disable: our release.yml handles GitHub releases
+git_release_enable = false
+
+# Disable: not publishing to crates.io
+publish = false
+semver_check = false
+
+# Release PR settings
+pr_labels = ["release"]
+pr_name = "chore: release v{{ version }}"
+
+# Also bump version in server.json
+[[package.files]]
+path = "server.json"
+search = '"version": ".*"'
+replace = '"version": "{{ version }}"'
+
+[[package.files]]
+path = "server.json"
+search = 'ovh-api-mcp:.*"'
+replace = 'ovh-api-mcp:{{ version }}"'
