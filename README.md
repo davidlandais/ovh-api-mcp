@@ -8,7 +8,7 @@
 
 A native **Model Context Protocol (MCP)** server that gives LLMs full access to the **OVH API**. Built in Rust for minimal footprint (~19 MB Docker image, ~1.2 MiB RAM).
 
-> **Early Release (v0.1)** — Designed for **local development use**. Security hardening has been applied (sandboxed execution, spec validation, secret protection), but the server has not been battle-tested at scale. Do not expose it to the public internet. Feedback and bug reports are welcome.
+> **Early Release** — Designed for **local development use**. Security hardening has been applied (sandboxed execution, spec validation, secret protection), but the server has not been battle-tested at scale. Do not expose it to the public internet. Feedback and bug reports are welcome.
 
 <a href="https://glama.ai/mcp/servers/davidlandais/ovh-api-mcp">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/davidlandais/ovh-api-mcp/badge" alt="ovh-api-mcp MCP server" />
@@ -25,9 +25,35 @@ The server exposes two MCP tools:
 
 The LLM writes JavaScript that runs inside a **sandboxed QuickJS engine** with resource limits (memory, CPU timeout, stack size). Every API call is validated against the loaded OpenAPI spec before execution.
 
+The server supports two transport modes:
+- **HTTP** (Streamable HTTP) — for web-based clients and Docker deployments
+- **stdio** — for direct integration with Claude Desktop, Cursor, and MCP inspectors
+
+OVH credentials are optional at startup: the server starts and exposes its tools even without API keys. Tools return a clear error when called without credentials.
+
 ## Quick start
 
-### With Docker (recommended)
+### With stdio (Claude Desktop / Cursor)
+
+Add to your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "ovh-api": {
+      "command": "ovh-api-mcp",
+      "args": ["--transport", "stdio"],
+      "env": {
+        "OVH_APPLICATION_KEY": "your_app_key",
+        "OVH_APPLICATION_SECRET": "your_app_secret",
+        "OVH_CONSUMER_KEY": "your_consumer_key"
+      }
+    }
+  }
+}
+```
+
+### With Docker
 
 ```bash
 docker run -d --name ovh-api \
@@ -50,9 +76,11 @@ export OVH_CONSUMER_KEY=your_consumer_key
 ovh-api-mcp --port 3104
 ```
 
-### Claude Code configuration
+### Pre-built binaries
 
-Add to your MCP settings (`~/.claude/settings.json`):
+Download from [GitHub Releases](https://github.com/davidlandais/ovh-api-mcp/releases) — available for macOS (x86_64, aarch64) and Linux (x86_64 musl).
+
+### Claude Code configuration (HTTP mode)
 
 ```json
 {
@@ -88,6 +116,7 @@ For full API access, set all four methods (`GET`, `POST`, `PUT`, `DELETE`) with 
 
 ```
 Options:
+  --transport <TRANSPORT>        Transport mode: http, stdio [env: OVH_TRANSPORT] [default: http]
   --port <PORT>                  Port to listen on [env: PORT] [default: 3104]
   --host <HOST>                  Host to bind to [default: 127.0.0.1]
   --endpoint <ENDPOINT>          OVH API endpoint: eu, ca, us [env: OVH_ENDPOINT] [default: eu]
@@ -159,7 +188,7 @@ async () => {
 
 ```
 src/
-  main.rs      CLI, logging, axum server setup, graceful shutdown
+  main.rs      CLI, logging, transport selection (HTTP/stdio), graceful shutdown
   tools.rs     MCP tool definitions (search, execute) via rmcp macros
   sandbox.rs   QuickJS sandboxed JS execution with resource limits
   auth.rs      OVH API client with signature, clock sync, request handling
