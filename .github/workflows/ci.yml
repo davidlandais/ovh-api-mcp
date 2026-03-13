@@ -24,6 +24,33 @@ jobs:
       - run: cargo clippy --all-targets
       - run: cargo test
 
+  commits:
+    name: Conventional commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Verify commit messages
+        run: |
+          commits=$(git log --format='%s' origin/main..HEAD)
+          pattern='^(feat|fix|docs|style|refactor|perf|test|chore|deps|security)(\(.+\))?(!)?: .{1,}$'
+          failed=0
+          while IFS= read -r msg; do
+            if ! echo "$msg" | grep -qE "$pattern"; then
+              echo "FAIL: $msg"
+              failed=1
+            fi
+          done <<< "$commits"
+          if [ "$failed" -eq 1 ]; then
+            echo ""
+            echo "Some commits do not follow Conventional Commits format."
+            echo "Format: <type>[scope][!]: <description>"
+            echo "Types: feat, fix, docs, style, refactor, perf, test, chore, deps, security"
+            exit 1
+          fi
+
   docker:
     name: Docker build
     runs-on: ubuntu-latest

@@ -110,11 +110,18 @@ jobs:
             org.opencontainers.image.licenses=MIT
             io.modelcontextprotocol.server.name=io.github.${{ github.repository }}
 
+      - name: Generate release notes
+        id: changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: Cargo.toml
+          args: --latest --strip header
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
-            --generate-notes \
+            --notes "${{ steps.changelog.outputs.content }}" \
             artifacts/*.tar.gz

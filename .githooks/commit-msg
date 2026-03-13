@@ -1,0 +1,16 @@
+#!/bin/sh
+# Enforce conventional commit format.
+# Allowed types: feat, fix, docs, style, refactor, perf, test, chore, deps, security
+
+msg=$(head -1 "$1")
+
+if ! echo "$msg" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|chore|deps|security)(\(.+\))?(!)?: .{1,}$'; then
+  echo "ERROR: commit message does not follow Conventional Commits."
+  echo ""
+  echo "  Format:  <type>[optional scope][!]: <description>"
+  echo "  Types:   feat, fix, docs, style, refactor, perf, test, chore, deps, security"
+  echo "  Example: feat: add stdio transport"
+  echo ""
+  echo "  Your message: $msg"
+  exit 1
+fi
