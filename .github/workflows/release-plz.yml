@@ -47,8 +47,37 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Run release-plz release-pr
+        id: release-plz
         uses: release-plz/action@v0.5
         with:
           command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+
+      - name: Sync server.json version
+        if: steps.release-plz.outputs.prs_created == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+        run: |
+          # Get the release PR branch
+          branch=$(echo '${{ steps.release-plz.outputs.prs }}' | jq -r '.[0].head_branch')
+          git fetch origin "$branch"
+          git checkout "$branch"
+
+          # Read version from Cargo.toml (already bumped by release-plz)
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+
+          # Update server.json
+          sed -i "s/\"version\": \".*\"/\"version\": \"$version\"/" server.json
+          sed -i "s/ovh-api-mcp:.*\"/ovh-api-mcp:$version\"/" server.json
+
+          # Commit and push if changed
+          if git diff --quiet server.json; then
+            echo "server.json already up to date"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add server.json
+            git commit -m "chore: sync server.json to v$version"
+            git push origin "$branch"
+          fi

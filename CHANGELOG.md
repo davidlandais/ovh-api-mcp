@@ -8,15 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
-- Add stdio transport and cross-compiled binary releases
-
-### Fixed
-- Allow server startup without OVH credentials
-
-### Miscellaneous
-- Add CLAUDE.md and ignore PUBLICATION.md
-
 ## [0.2.0] - 2026-03-12
 
 ### Dependencies
