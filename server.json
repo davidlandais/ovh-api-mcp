@@ -51,6 +51,20 @@
           "format": "string",
           "isSecret": false,
           "default": "*"
+        },
+        {
+          "name": "OVH_CLIENT_ID",
+          "description": "OVH OAuth2 client ID (service account, alternative to API keys)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "OVH_CLIENT_SECRET",
+          "description": "OVH OAuth2 client secret (service account)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
         }
       ]
     }

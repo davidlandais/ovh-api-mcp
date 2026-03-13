@@ -6,7 +6,7 @@
 [![MCP](https://img.shields.io/badge/MCP-2025--03--26-green.svg)](https://modelcontextprotocol.io/)
 [![Status](https://img.shields.io/badge/Status-Early%20Release-blue.svg)](#status)
 
-A native **Model Context Protocol (MCP)** server that gives LLMs full access to the **OVH API**. Built in Rust for minimal footprint (~19 MB Docker image, ~1.2 MiB RAM).
+A native **Model Context Protocol (MCP)** server that gives LLMs full access to the **OVH API (v1 and v2)**. Built in Rust for minimal footprint (~19 MB Docker image, ~1.2 MiB RAM).
 
 > **Early Release** — Designed for **local development use**. Security hardening has been applied (sandboxed execution, spec validation, secret protection), but the server has not been battle-tested at scale. Do not expose it to the public internet. Feedback and bug reports are welcome.
 
@@ -112,6 +112,19 @@ Go to the token creation page for your region, log in with your OVH account, set
 
 For full API access, set all four methods (`GET`, `POST`, `PUT`, `DELETE`) with path `/*`.
 
+### OAuth2 authentication (service accounts)
+
+As an alternative to API keys, you can use OVH service accounts with OAuth2 client credentials:
+
+| Variable | Description |
+|----------|-------------|
+| `OVH_CLIENT_ID` | Service account ID |
+| `OVH_CLIENT_SECRET` | Service account secret |
+
+Create a service account in the [OVH Manager](https://www.ovh.com/manager/) under IAM > Service Accounts. Configure an access policy to grant the required API permissions.
+
+The server auto-detects the auth mode from environment variables. Do not set both API keys and OAuth2 credentials at the same time.
+
 ## CLI options
 
 ```
@@ -123,6 +136,8 @@ Options:
   --app-key <APP_KEY>            OVH application key [env: OVH_APPLICATION_KEY]
   --app-secret <APP_SECRET>      OVH application secret [env: OVH_APPLICATION_SECRET]
   --consumer-key <CONSUMER_KEY>  OVH consumer key [env: OVH_CONSUMER_KEY]
+  --client-id <CLIENT_ID>        OVH OAuth2 client ID [env: OVH_CLIENT_ID]
+  --client-secret <CLIENT_SECRET> OVH OAuth2 client secret [env: OVH_CLIENT_SECRET]
   --services <SERVICES>          Services to load, comma-separated or "*" [env: OVH_SERVICES] [default: *]
   --cache-dir <PATH>             Directory to cache the merged spec [env: OVH_CACHE_DIR]
   --cache-ttl <SECONDS>          Cache TTL in seconds, 0 to disable [env: OVH_CACHE_TTL] [default: 86400]
@@ -153,7 +168,7 @@ Once connected, the LLM can use the tools like this:
 **List your domain zones:**
 ```javascript
 // execute tool
-async () => await ovh.request({ method: "GET", path: "/domain/zone" })
+async () => await ovh.request({ method: "GET", path: "/v1/domain/zone" })
 ```
 
 **Get DNS records for a domain:**
@@ -162,13 +177,13 @@ async () => await ovh.request({ method: "GET", path: "/domain/zone" })
 async () => {
   const records = await ovh.request({
     method: "GET",
-    path: "/domain/zone/example.com/record"
+    path: "/v1/domain/zone/example.com/record"
   });
   const details = [];
   for (const id of records.slice(0, 10)) {
     details.push(await ovh.request({
       method: "GET",
-      path: `/domain/zone/example.com/record/${id}`
+      path: `/v1/domain/zone/example.com/record/${id}`
     }));
   }
   return details;
