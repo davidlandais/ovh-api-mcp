@@ -121,7 +121,7 @@ As an alternative to API keys, you can use OVH service accounts with OAuth2 clie
 | `OVH_CLIENT_ID` | Service account ID |
 | `OVH_CLIENT_SECRET` | Service account secret |
 
-Create a service account in the [OVH Manager](https://www.ovh.com/manager/) under IAM > Service Accounts. Configure an access policy to grant the required API permissions.
+Service accounts are created via the OVH API (`POST /me/api/oauth2/client` with `flow: CLIENT_CREDENTIALS`). You must then create an IAM policy (`POST /v2/iam/policy`) to grant API permissions to the service account. See the [OVHcloud documentation](https://help.ovhcloud.com/csm/en-manage-service-account) for details.
 
 The server auto-detects the auth mode from environment variables. Do not set both API keys and OAuth2 credentials at the same time.
 
