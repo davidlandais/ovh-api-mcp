@@ -31,6 +31,10 @@ The server supports two transport modes:
 
 OVH credentials are optional at startup: the server starts and exposes its tools even without API keys. Tools return a clear error when called without credentials.
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/davidlandais-ovh-api-mcp).
+
 ## Quick start
 
 ### With stdio (Claude Desktop / Cursor)
